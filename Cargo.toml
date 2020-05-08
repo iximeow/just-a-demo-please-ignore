@@ -11,9 +11,9 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yaxpeax-arch = "*"
-yaxpeax-x86 = "*"
+yaxpeax-arch = "0.0.4"
 
 [profile.release]
 opt-level = 3
 lto = "fat"
+panic = "abort"

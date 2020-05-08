@@ -1,20 +1,11 @@
-use yaxpeax_x86::long_mode::{Arch as amd64};
-use yaxpeax_x86::long_mode::Operand;
-use yaxpeax_arch::Arch;
+#![no_std]
+
+mod analyses;
+mod control_flow;
+mod semantic;
 
 #[no_mangle]
-pub fn read_jump_rel_operand(inst: &<amd64 as Arch>::Instruction, idx: u8) -> u64 {
-    match inst.operand(idx) {
-        Operand::ImmediateI8(imm) => {
-            imm as i64 as u64
-        }
-        Operand::ImmediateI32(imm) => {
-            imm as i64 as u64
-        }
-        _ => {
-            unsafe {
-                std::hint::unreachable_unchecked();
-            }
-        }
-    }
+pub fn control_flow(inst: &crate::semantic::test_isa::Instruction) -> crate::control_flow::Effect<u64> {
+    use crate::control_flow::Determinant;
+    inst.control_flow(Option::<&()>::None)
 }

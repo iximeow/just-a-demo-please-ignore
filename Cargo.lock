@@ -32,7 +32,6 @@ name = "oops"
 version = "0.1.0"
 dependencies = [
  "yaxpeax-arch",
- "yaxpeax-x86",
 ]
 
 [[package]]
@@ -124,16 +123,4 @@ dependencies = [
  "serde",
  "serde_derive",
  "termion",
-]
-
-[[package]]
-name = "yaxpeax-x86"
-version = "0.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b95531fa2a2fa283d3c2fb3476f43e16e6c83e459d6a87d39dded8b656253207"
-dependencies = [
- "num-traits",
- "serde",
- "serde_derive",
- "yaxpeax-arch",
 ]
