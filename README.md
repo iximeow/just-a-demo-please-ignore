@@ -1,189 +1,180 @@
-if you `cargo build --release` this, even though lto is enabled this produces surprisingly lacking assembly for `read_jump_rel_operand`:
+if you `cargo build --release` this, even though lto is enabled this produces surprisingly lacking assembly for `control_flow`:
 
 ```
-[0x00002980]> pd 100 @ sym.read_jump_rel_operand
-            ;-- read_jump_rel_operand:
-            0x00002a60      50             push rax
-            0x00002a61      4080fe04       cmp sil, 4
-        ,=< 0x00002a65      0f83cf000000   jae 0x2b3a
-        |   0x00002a6b      400fb6c6       movzx eax, sil
-        |   0x00002a6f      0fb6440720     movzx eax, byte [rdi + rax + 0x20] ; [0x20:1]=64 ; "@"
-        |   0x00002a74      31c9           xor ecx, ecx
-        |   0x00002a76      488d15a3ef01.  lea rdx, qword [0x00021a20] ; section..rodata
-        |   0x00002a7d      48633482       movsxd rsi, dword [rdx + rax*4]
-        |   0x00002a81      4801d6         add rsi, rdx                ; '('
-        |   0x00002a84      31c0           xor eax, eax
-        |   0x00002a86      31d2           xor edx, edx
-        |   0x00002a88      ffe6           jmp rsi
-        |   0x00002a8a      8a4717         mov al, byte [rdi + 0x17]   ; [0x17:1]=0
-        |   0x00002a8d      31c9           xor ecx, ecx
-       ,==< 0x00002a8f      e986000000     jmp 0x2b1a
-       ||   0x00002a94      8a4717         mov al, byte [rdi + 0x17]   ; [0x17:1]=0
-       ||   0x00002a97      448a471a       mov r8b, byte [rdi + 0x1a]  ; [0x1a:1]=0
-       ||   0x00002a9b      31c9           xor ecx, ecx
-      ,===< 0x00002a9d      eb7b           jmp 0x2b1a
-      |||   0x00002a9f      8a4717         mov al, byte [rdi + 0x17]   ; [0x17:1]=0
-      |||   0x00002aa2      448a471a       mov r8b, byte [rdi + 0x1a]  ; [0x1a:1]=0
-      |||   0x00002aa6      448a4f1d       mov r9b, byte [rdi + 0x1d]  ; [0x1d:1]=0
-      |||   0x00002aaa      31c9           xor ecx, ecx
-     ,====< 0x00002aac      eb6c           jmp 0x2b1a
-     ||||   0x00002aae      4c8b07         mov r8, qword [rdi]
-    ,=====< 0x00002ab1      eb04           jmp 0x2ab7
-    |||||   0x00002ab3      4c8b4708       mov r8, qword [rdi + 8]     ; [0x8:8]=0
-    `-----> 0x00002ab7      4589c1         mov r9d, r8d
-     ||||   0x00002aba      41c1e908       shr r9d, 8
-     ||||   0x00002abe      4489c1         mov ecx, r8d
-     ||||   0x00002ac1      81e10000ffff   and ecx, 0xffff0000
-     ||||   0x00002ac7      31d2           xor edx, edx
-    ,=====< 0x00002ac9      eb51           jmp 0x2b1c
-    |||||   0x00002acb      b001           mov al, 1
-    |||||   0x00002acd      31c9           xor ecx, ecx
-   ,======< 0x00002acf      eb49           jmp 0x2b1a
-   ||||||   0x00002ad1      8a07           mov al, byte [rdi]
-   ||||||   0x00002ad3      b201           mov dl, 1
-  ,=======< 0x00002ad5      eb45           jmp 0x2b1c
-  |||||||   0x00002ad7      8a4715         mov al, byte [rdi + 0x15]   ; [0x15:1]=0
-  |||||||   0x00002ada      31c9           xor ecx, ecx
-  ========< 0x00002adc      eb3c           jmp 0x2b1a
-  |||||||   0x00002ade      8a471b         mov al, byte [rdi + 0x1b]   ; [0x1b:1]=0
-  |||||||   0x00002ae1      31c9           xor ecx, ecx
-  ========< 0x00002ae3      eb35           jmp 0x2b1a
-  |||||||   0x00002ae5      8a07           mov al, byte [rdi]
-  |||||||   0x00002ae7      31c9           xor ecx, ecx
-  ========< 0x00002ae9      eb2f           jmp 0x2b1a
-  |||||||   0x00002aeb      b006           mov al, 6
-  |||||||   0x00002aed      31c9           xor ecx, ecx
-  ========< 0x00002aef      eb29           jmp 0x2b1a
-  |||||||   0x00002af1      b007           mov al, 7
-  |||||||   0x00002af3      31c9           xor ecx, ecx
-  ========< 0x00002af5      eb23           jmp 0x2b1a
-  |||||||   0x00002af7      8a4719         mov al, byte [rdi + 0x19]   ; [0x19:1]=41
-  |||||||   0x00002afa      31c9           xor ecx, ecx
-  ========< 0x00002afc      eb1c           jmp 0x2b1a
-  |||||||   0x00002afe      8a4717         mov al, byte [rdi + 0x17]   ; [0x17:1]=0
-  ========< 0x00002b01      eb03           jmp 0x2b06
-  |||||||   0x00002b03      8a4719         mov al, byte [rdi + 0x19]   ; [0x19:1]=41
-  --------> 0x00002b06      4c8b4708       mov r8, qword [rdi + 8]     ; [0x8:8]=0
-  |||||||   0x00002b0a      4589c1         mov r9d, r8d
-  |||||||   0x00002b0d      41c1e908       shr r9d, 8
-  |||||||   0x00002b11      4489c1         mov ecx, r8d
-  |||||||   0x00002b14      81e10000ffff   and ecx, 0xffff0000
-  -`-```--> 0x00002b1a      31d2           xor edx, edx
-  `-`-----> 0x00002b1c      410fb6f1       movzx esi, r9b
-        |   0x00002b20      c1e608         shl esi, 8
-        |   0x00002b23      410fb6f8       movzx edi, r8b
-        |   0x00002b27      09cf           or edi, ecx
-        |   0x00002b29      09f7           or edi, esi
-        |   0x00002b2b      4863cf         movsxd rcx, edi
-        |   0x00002b2e      480fbec0       movsx rax, al
-        |   0x00002b32      84d2           test dl, dl
-        |   0x00002b34      480f44c1       cmove rax, rcx
-        |   0x00002b38      59             pop rcx
-        |   0x00002b39      c3             ret
-        `-> 0x00002b3a      488d3db61102.  lea rdi, qword [0x00023cf7] ; "assertion failed: i < 4failed to read executable information"
-            0x00002b41      488d15387022.  lea rdx, qword [0x00229b80]
-            0x00002b48      be17000000     mov esi, 0x17
-            0x00002b4d      e80e1f0000     call sym.core::panicking::panic::h3a82ab1d0243e74d
-            0x00002b52      0f0b           ud2
-```
-
-when `read_jump_rel_operand` is added to `yaxpeax_x86/ffi`, this same function builds with much more reasonable output:
-```
-[0x00005430]> pdf @ sym.read_jump_rel_operand
-/ (fcn) sym.read_jump_rel_operand 24
-|   sym.read_jump_rel_operand ();
-|           0x00012d70      400fb6c6       movzx eax, sil
-|           0x00012d74      807c072006     cmp byte [rdi + rax + 0x20], 6 ; [0x6:1]=1
-|           0x00012d79      488b07         mov rax, qword [rdi]
-|           0x00012d7c      4863c8         movsxd rcx, eax
-|           0x00012d7f      480fbec0       movsx rax, al
-|           0x00012d83      480f45c1       cmovne rax, rcx
-\           0x00012d87      c3             ret
+	.section	.text.control_flow,"ax",@progbits
+	.globl	control_flow
+	.p2align	4, 0x90
+	.type	control_flow,@function
+control_flow:
+.Lfunc_begin0:
+	.cfi_startproc
+	subq	$16, %rsp
+	.cfi_def_cfa_offset 24
+	movq	%rdi, %rax
+	movb	8(%rsi), %cl
+	movl	$4, %r9d
+	xorl	%edi, %edi
+	addb	$-1, %cl
+	cmpb	$6, %cl
+	ja	.LBB0_12
+	movq	(%rsi), %r8
+	movb	9(%rsi), %dl
+	movzbl	%cl, %ecx
+	leaq	.LJTI0_0(%rip), %rsi
+	movslq	(%rsi,%rcx,4), %rcx
+	addq	%rsi, %rcx
+	jmpq	*%rcx
+.LBB0_2:
+	movb	$1, %dil
+	jmp	.LBB0_16
+.LBB0_3:
+	movl	$4, %r9d
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_4(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
+.LBB0_5:
+	movl	$4, %r9d
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_3(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
+.LBB0_4:
+	movsbq	%r8b, %r8
+	jmp	.LBB0_14
+.LBB0_7:
+	xorl	%esi, %esi
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_2(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
+.LBB0_8:
+	xorl	%esi, %esi
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_1(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
+.LBB0_9:
+	movq	%r8, %rsi
+.LBB0_10:
+	shlq	$32, %rsi
+	movl	$32, %ecx
+.LBB0_11:
+	sarq	%cl, %rsi
+	movl	9(%rsp), %ecx
+	movl	12(%rsp), %edx
+	movl	%edx, 3(%rsp)
+	movl	%ecx, (%rsp)
+	xorl	%edi, %edi
+	movq	%rsi, %r8
+	xorl	%r9d, %r9d
+	jmp	.LBB0_16
+.LBB0_12:
+	jmp	.LBB0_16
+.LBB0_13:
+	movzbl	%r8b, %r8d
+.LBB0_14:
+	xorl	%r9d, %r9d
+.LBB0_15:
+	movl	9(%rsp), %ecx
+	movl	12(%rsp), %edx
+	movl	%edx, 3(%rsp)
+	movl	%ecx, (%rsp)
+	movb	$1, %dil
+.LBB0_16:
+	movq	%r9, (%rax)
+	movq	%r8, 8(%rax)
+	movb	%dil, 16(%rax)
+	movl	(%rsp), %ecx
+	movl	3(%rsp), %edx
+	movl	%ecx, 17(%rax)
+	movl	%edx, 20(%rax)
+	addq	$16, %rsp
+	.cfi_def_cfa_offset 8
+	retq
+.LBB0_17:
+	.cfi_def_cfa_offset 24
+	shlq	$56, %r8
+	movl	$56, %ecx
+	movq	%r8, %rsi
+	jmp	.LBB0_11
+.Lfunc_end0:
+	.size	control_flow, .Lfunc_end0-control_flow
+	.cfi_endproc
+	.section	.rodata.control_flow,"a",@progbits
+	.p2align	2
+.LJTI0_0:
+	.long	.LBB0_2-.LJTI0_0
+	.long	.LBB0_16-.LJTI0_0
+	.long	.LBB0_3-.LJTI0_0
+	.long	.LBB0_16-.LJTI0_0
+	.long	.LBB0_5-.LJTI0_0
+	.long	.LBB0_7-.LJTI0_0
+	.long	.LBB0_8-.LJTI0_0
+.LJTI0_1:
+	.long	.LBB0_10-.LJTI0_1
+	.long	.LBB0_10-.LJTI0_1
+	.long	.LBB0_17-.LJTI0_1
+	.long	.LBB0_10-.LJTI0_1
+	.long	.LBB0_9-.LJTI0_1
+	.long	.LBB0_9-.LJTI0_1
+	.long	.LBB0_10-.LJTI0_1
+	.long	.LBB0_10-.LJTI0_1
+.LJTI0_2:
+	.long	.LBB0_10-.LJTI0_2
+	.long	.LBB0_10-.LJTI0_2
+	.long	.LBB0_17-.LJTI0_2
+	.long	.LBB0_10-.LJTI0_2
+	.long	.LBB0_9-.LJTI0_2
+	.long	.LBB0_9-.LJTI0_2
+	.long	.LBB0_10-.LJTI0_2
+	.long	.LBB0_10-.LJTI0_2
+.LJTI0_3:
+	.long	.LBB0_15-.LJTI0_3
+	.long	.LBB0_15-.LJTI0_3
+	.long	.LBB0_4-.LJTI0_3
+	.long	.LBB0_13-.LJTI0_3
+	.long	.LBB0_15-.LJTI0_3
+	.long	.LBB0_15-.LJTI0_3
+	.long	.LBB0_14-.LJTI0_3
+	.long	.LBB0_14-.LJTI0_3
+.LJTI0_4:
+	.long	.LBB0_15-.LJTI0_4
+	.long	.LBB0_15-.LJTI0_4
+	.long	.LBB0_4-.LJTI0_4
+	.long	.LBB0_13-.LJTI0_4
+	.long	.LBB0_15-.LJTI0_4
+	.long	.LBB0_15-.LJTI0_4
+	.long	.LBB0_14-.LJTI0_4
+	.long	.LBB0_14-.LJTI0_4
 ```
 
 what????
 
-the large switch above has 26 cases. there are not 26 cases in the function! or are there? `inst.operand(idx)`is a call to `Instruction::operand` in `yaxpeax_x86`. on the version used here, `0.0.11`, that's written like:
-```rust
-pub fn operand(&self, i: u8) -> Operand {
-    assert!(i < 4);
-    Operand::from_spec(self, self.operands[i as usize])
-}
+`LJTI0_1` and `LJTI0_2` are identical. the blocks leading to them:
+```
+.LBB0_7:
+	xorl	%esi, %esi
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_2(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
+.LBB0_8:
+	xorl	%esi, %esi
+	movzbl	%dl, %ecx
+	leaq	.LJTI0_1(%rip), %rdx
+	movslq	(%rdx,%rcx,4), %rcx
+	addq	%rdx, %rcx
+	jmpq	*%rcx
 ```
 
-this is where the panic at the end of the first function comes from. the 26-case match, though, comes from `Operand::from_spec`:
-```rust
-#[inline]
-fn from_spec(inst: &Instruction, spec: OperandSpec) -> Operand {
-    match spec {
-        OperandSpec::Nothing => {
-            Operand::Nothing
-        }
-        // the register in modrm_rrr
-        OperandSpec::RegRRR => {
-            Operand::Register(inst.modrm_rrr)
-        }
-        // the register in modrm_mmm (eg modrm mod bits were 11)
-        OperandSpec::RegMMM => {
-            Operand::Register(inst.modrm_mmm)
-        }
-        OperandSpec::RegVex => {
-            Operand::Register(inst.vex_reg)
-        }
-        OperandSpec::AL => {
-            Operand::Register(RegSpec::al())
-        }
-        OperandSpec::CL => {
-            Operand::Register(RegSpec::cl())
-        }
-        OperandSpec::ImmI8 => Operand::ImmediateI8(inst.imm as i8),
-        OperandSpec::ImmU8 => Operand::ImmediateU8(inst.imm as u8),
-        OperandSpec::ImmI16 => Operand::ImmediateI16(inst.imm as i16),
-        OperandSpec::ImmU16 => Operand::ImmediateU16(inst.imm as u16),
-        OperandSpec::ImmI32 => Operand::ImmediateI32(inst.imm as i32),
-        OperandSpec::ImmU32 => Operand::ImmediateU32(inst.imm as u32),
-        OperandSpec::ImmI64 => Operand::ImmediateI64(inst.imm as i64),
-        OperandSpec::ImmU64 => Operand::ImmediateU64(inst.imm as u64),
-        OperandSpec::DispU32 => Operand::DisplacementU32(inst.disp as u32),
-        OperandSpec::DispU64 => Operand::DisplacementU64(inst.disp as u64),
-        OperandSpec::Deref => {
-            Operand::RegDeref(inst.modrm_mmm)
-        }
-        OperandSpec::Deref_rsi => {
-            Operand::RegDeref(RegSpec::rsi())
-        }
-        OperandSpec::Deref_rdi => {
-            Operand::RegDeref(RegSpec::rdi())
-        }
-        OperandSpec::RegDisp => {
-            Operand::RegDisp(inst.modrm_mmm, inst.disp as i32)
-        }
-        OperandSpec::RegScale => {
-            Operand::RegScale(inst.sib_index, inst.scale)
-        }
-        OperandSpec::RegIndexBase => {
-            Operand::RegIndexBase(inst.modrm_mmm, inst.sib_index)
-        }
-        OperandSpec::RegIndexBaseDisp => {
-            Operand::RegIndexBaseDisp(inst.modrm_mmm, inst.sib_index, inst.disp as i32)
-        }
-        OperandSpec::RegScaleDisp => {
-            Operand::RegScaleDisp(inst.sib_index, inst.scale, inst.disp as i32)
-        }
-        OperandSpec::RegIndexBaseScale => {
-            Operand::RegIndexBaseScale(inst.modrm_mmm, inst.sib_index, inst.scale)
-        }
-        OperandSpec::RegIndexBaseScaleDisp => {
-            Operand::RegIndexBaseScaleDisp(inst.modrm_mmm, inst.sib_index, inst.scale, inst.disp as i32)
-        }
-    }
-}
-```
-some arms line up here:
-* `0x00002aae      4c8b07         mov r8, qword [rdi] ` is likely reading `inst.disp` for displacement variants
-* `0x00002aae      4c8b07         mov r8, qword [rdi] ` and `0x00002ad1      8a07           mov al, byte [rdi]` line up with multiple ways by which `imm` is read
-* `0x00002af1      b007           mov al, 7 ` is probably preparing the register number (7) for `OperandSpec::Deref_rdi`
-and so on
+are also identical. these seem to line up with the `JO` and `JNO` cases in the match at `src/semantic.rs:175`
 
-so even though only two operand arms are actually read, the entirety of `Operand::from_spec` has been inlined and no further analysis has been done..?
+the same holds for `JMP` and `CALL` through `LJTI0_3` and `LJTI0_4`, and the blocks leading to them.
 
+in both cases the arms are duplicate and rustc could/should fold them together to reduce space usage at no overhead. why not???
