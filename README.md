@@ -102,3 +102,88 @@ when `read_jump_rel_operand` is added to `yaxpeax_x86/ffi`, this same function b
 ```
 
 what????
+
+the large switch above has 26 cases. there are not 26 cases in the function! or are there? `inst.operand(idx)`is a call to `Instruction::operand` in `yaxpeax_x86`. on the version used here, `0.0.11`, that's written like:
+```rust
+pub fn operand(&self, i: u8) -> Operand {
+    assert!(i < 4);
+    Operand::from_spec(self, self.operands[i as usize])
+}
+```
+
+this is where the panic at the end of the first function comes from. the 26-case match, though, comes from `Operand::from_spec`:
+```rust
+#[inline]
+fn from_spec(inst: &Instruction, spec: OperandSpec) -> Operand {
+    match spec {
+        OperandSpec::Nothing => {
+            Operand::Nothing
+        }
+        // the register in modrm_rrr
+        OperandSpec::RegRRR => {
+            Operand::Register(inst.modrm_rrr)
+        }
+        // the register in modrm_mmm (eg modrm mod bits were 11)
+        OperandSpec::RegMMM => {
+            Operand::Register(inst.modrm_mmm)
+        }
+        OperandSpec::RegVex => {
+            Operand::Register(inst.vex_reg)
+        }
+        OperandSpec::AL => {
+            Operand::Register(RegSpec::al())
+        }
+        OperandSpec::CL => {
+            Operand::Register(RegSpec::cl())
+        }
+        OperandSpec::ImmI8 => Operand::ImmediateI8(inst.imm as i8),
+        OperandSpec::ImmU8 => Operand::ImmediateU8(inst.imm as u8),
+        OperandSpec::ImmI16 => Operand::ImmediateI16(inst.imm as i16),
+        OperandSpec::ImmU16 => Operand::ImmediateU16(inst.imm as u16),
+        OperandSpec::ImmI32 => Operand::ImmediateI32(inst.imm as i32),
+        OperandSpec::ImmU32 => Operand::ImmediateU32(inst.imm as u32),
+        OperandSpec::ImmI64 => Operand::ImmediateI64(inst.imm as i64),
+        OperandSpec::ImmU64 => Operand::ImmediateU64(inst.imm as u64),
+        OperandSpec::DispU32 => Operand::DisplacementU32(inst.disp as u32),
+        OperandSpec::DispU64 => Operand::DisplacementU64(inst.disp as u64),
+        OperandSpec::Deref => {
+            Operand::RegDeref(inst.modrm_mmm)
+        }
+        OperandSpec::Deref_rsi => {
+            Operand::RegDeref(RegSpec::rsi())
+        }
+        OperandSpec::Deref_rdi => {
+            Operand::RegDeref(RegSpec::rdi())
+        }
+        OperandSpec::RegDisp => {
+            Operand::RegDisp(inst.modrm_mmm, inst.disp as i32)
+        }
+        OperandSpec::RegScale => {
+            Operand::RegScale(inst.sib_index, inst.scale)
+        }
+        OperandSpec::RegIndexBase => {
+            Operand::RegIndexBase(inst.modrm_mmm, inst.sib_index)
+        }
+        OperandSpec::RegIndexBaseDisp => {
+            Operand::RegIndexBaseDisp(inst.modrm_mmm, inst.sib_index, inst.disp as i32)
+        }
+        OperandSpec::RegScaleDisp => {
+            Operand::RegScaleDisp(inst.sib_index, inst.scale, inst.disp as i32)
+        }
+        OperandSpec::RegIndexBaseScale => {
+            Operand::RegIndexBaseScale(inst.modrm_mmm, inst.sib_index, inst.scale)
+        }
+        OperandSpec::RegIndexBaseScaleDisp => {
+            Operand::RegIndexBaseScaleDisp(inst.modrm_mmm, inst.sib_index, inst.scale, inst.disp as i32)
+        }
+    }
+}
+```
+some arms line up here:
+* `0x00002aae      4c8b07         mov r8, qword [rdi] ` is likely reading `inst.disp` for displacement variants
+* `0x00002aae      4c8b07         mov r8, qword [rdi] ` and `0x00002ad1      8a07           mov al, byte [rdi]` line up with multiple ways by which `imm` is read
+* `0x00002af1      b007           mov al, 7 ` is probably preparing the register number (7) for `OperandSpec::Deref_rdi`
+and so on
+
+so even though only two operand arms are actually read, the entirety of `Operand::from_spec` has been inlined and no further analysis has been done..?
+
