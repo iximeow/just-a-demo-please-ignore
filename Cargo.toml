@@ -1,0 +1,19 @@
+[package]
+name = "oops"
+version = "0.1.0"
+authors = ["iximeow <me@iximeow.net>"]
+edition = "2018"
+
+[lib]
+name = "libyaxoops"
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+yaxpeax-arch = "*"
+yaxpeax-x86 = "*"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
