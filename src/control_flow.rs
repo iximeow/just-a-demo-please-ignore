@@ -45,7 +45,3 @@ pub enum Target<Addr: AddressDiffAmount + fmt::Debug> {
     Multiple(usize), // TODO: ?? jump tables? tableid
     Indeterminate       // Unknowns? rets? idk
 }
-
-pub trait Determinant<T, Addr: AddressDiffAmount + fmt::Debug> {
-    fn control_flow(&self, ctx: Option<&T>) -> Effect<Addr>;
-}

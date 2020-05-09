@@ -6,6 +6,7 @@ use yaxpeax_arch::{Address, AddressDiff};
 
 #[allow(dead_code)]
 pub mod test_isa {
+    #[derive(Copy, Clone, PartialEq, Eq)]
     pub enum Opcode {
         NOP,
         RETURN,
@@ -19,6 +20,7 @@ pub mod test_isa {
         JNS,
     }
 
+    #[derive(Copy, Clone, PartialEq, Eq)]
     pub enum Operand {
         RegDeref(u8),
         Register(u8),
@@ -30,7 +32,7 @@ pub mod test_isa {
         ImmediateU64(u64),
     }
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
     enum OperandCode {
         RegDeref,
         Register,
@@ -200,12 +202,12 @@ pub(crate) fn evaluate<V: Value, D: DFG<V, Location=Location>>(instr: &Instructi
     };
 }
 
-struct ControlFlowAnalysis<A: Address + fmt::Debug> {
-    effect: control_flow::Effect<A>,
+pub struct ControlFlowAnalysis<A: Address + fmt::Debug> {
+    pub effect: control_flow::Effect<A>,
 }
 
 impl <A: Address + fmt::Debug> ControlFlowAnalysis<A> {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             effect: control_flow::Effect::cont(),
         }
@@ -323,13 +325,5 @@ impl<Addr: Address + fmt::Debug + ToAddrDiff> DFG<control_flow::Effect<Addr>> fo
         } else {
             // do nothing, it's a location we ignore for control flow analysis
         }
-    }
-}
-
-impl <T> control_flow::Determinant<T, u64> for Instruction {
-    fn control_flow(&self, _ctx: Option<&T>) -> control_flow::Effect<u64> {
-        let mut instr_control_flow = ControlFlowAnalysis::new();
-        crate::semantic::evaluate(self, &mut instr_control_flow);
-        instr_control_flow.effect
     }
 }
